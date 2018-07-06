@@ -6,6 +6,7 @@ const CMSIF_TPL          = 'default';
 const CMSIF_ENCODING     = 'UTF-8';
 const CMSIF_COOKIE_LTIME = 3600;
 const CMSIF_TIMEZONE     = 'Europe/Moscow';
+const CMSIF_DEFAULT_LANG = 'en';
 
 const CMSIF_FILES        = __DIR__.'/__FILES__/';
 const CMSIF_MODULES      = __DIR__.'/__MODULES__/';
@@ -36,11 +37,24 @@ function init()
 
     dataSet('auth_types', ['file', 'http', 'db']);
 
+    /**
+     * HTML Language Code Reference
+     * https://www.w3schools.com/tags/ref_language_codes.asp
+     */
     dataSet('languages', [
-        'ru'=>['ru','be','uk','ky','ab','mo','et','lv'],
+        'ru'=>[
+            'ru','be','uk','bg',
+            'ky','kk','kv','ce',
+            'ab','az','mo','hy',
+            'et','lv','lt','cv',
+            'ka','tg','tt','tk',
+            'uz'],
         'de'=>'de',
         'tr'=>'tr',
         'it'=>'it',
+        'es'=>[
+            'es', 'ca', 'co'
+        ],
     ]);
 
     languageSet();
@@ -58,21 +72,21 @@ function init()
     mb_http_input(CMSIF_ENCODING); 
     mb_regex_encoding(CMSIF_ENCODING);
     
-    cookieSet('language', language());
+    cookieSet('language', languageGet());
     
     dbConnect();
 }
 
-function language()
+function languageGet()
 {
-    return dataGet('language', 'en');
+    return dataGet('language', CMSIF_DEFAULT_LANG);
 }
 
-function languageSet($_default_language='en')
+function languageSet($_default_language=CMSIF_DEFAULT_LANG)
 {
     $_lang = $_default_language;
-    $_languages_client = languageClient();
-    $_languages = languageMapping($_lang);
+    $_languages_client = language_client();
+    $_languages = language_mapping($_lang);
 
     foreach($_languages_client as $l => $v)
     {
@@ -86,7 +100,7 @@ function languageSet($_default_language='en')
     dataSet('language', $_lang);
 }
 
-function languageMapping($_default_language)
+function language_mapping($_default_language)
 {
     $_languages = [];
     $_langs_mapping = dataGet('languages', [$_default_language=>$_default_language]);
@@ -111,7 +125,7 @@ function languageMapping($_default_language)
     return $_languages;
 }
 
-function languageClient()
+function language_client()
 {
     $_language = [];
     
