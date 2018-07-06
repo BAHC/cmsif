@@ -63,32 +63,3 @@ function getExchangeRate($_from=null, $_to=null, $_precise=2)
     }
     return $_res;
 }
-
-
-function turkey2_exchange_rate($_opt='', $_signs = 2)
-{
-	$res = null;
-	$url = 'http://www.tcmb.gov.tr/kurlar/today.xml';
-	$xml = @simplexml_load_file($url, 'SimpleXMLElement', LIBXML_NOCDATA);
-	
-	$_errors = libxml_get_errors();
-	
-	if(!count($_errors))
-	{
-		$_count = count($xml->Currency);
-		$_currency = [];
-		for($i=0;$i<$_count;$i++)
-		{
-			$_code = (string) $xml->Currency[$i]->attributes()->CurrencyCode;
-			$_price = (string) $xml->Currency[$i]->BanknoteBuying;
-			$_currency[ $_code ] = $_price;
-		}
-		
-		if(isset($_currency[$_opt]))
-		{
-			$res = number_format($_currency[$_opt], (int)$_signs, '.', '');
-		}
-	}
-
-	return $res;
-}
