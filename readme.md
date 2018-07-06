@@ -1,4 +1,4 @@
-#CMSIF - **CMS* *I*n *F*ile
+CMSIF - CMS In File
 
 CMSIF know how to manage with:
 
