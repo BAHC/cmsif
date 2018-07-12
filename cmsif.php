@@ -739,7 +739,8 @@ function renderHTML($_template = 'main', $_content = '')
     $_assets_external = dataGet('assets_external', []);
     $_assets_local    = dataGet('assets_local', []);
     $_blocks          = dataGet('blocks', []);
-    
+    $_assets_out      = [];
+
     if(count($_assets_external))
     {
         $_assets_out[] = implode(EOL, $_assets_external);
