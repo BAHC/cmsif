@@ -166,17 +166,17 @@ function filter_strip_slashes($_data)
 {
     if(is_array($_data))
     {
-		foreach($_data as $_k => $_v)
-		{
-		    $_data[filter_strip_slashes($_k)] = filter_strip_slashes($_v);
-		}
-	}
-	else
-	{
+        foreach($_data as $_k => $_v)
+        {
+            $_data[filter_strip_slashes($_k)] = filter_strip_slashes($_v);
+        }
+    }
+    else
+    {
         $_data = stripslashes($_data);
-	}
+    }
 
-	return $_data;
+    return $_data;
 }
 
 function filterGET()
@@ -809,11 +809,11 @@ function asset($_asset = '', $_media='screen')
         $_out = '';
         $_file = filterOne($_asset, ' .\/');
         $_ext = stringLow( pathinfo($_file, PATHINFO_EXTENSION) );
-        $_file_path = __DIR__ . CMSIF_ASSETS . $_ext .'/'.  $_file;
-        
+        $_file_path = __DIR__ .'/'. $_ext .'/'.  $_file;
+        $_file_url  = getHost() . CMSIF_ASSETS . $_ext.'/'. $_file;
+
         if(file_exists($_file_path) && is_readable($_file_path))
         {
-            $_file_url = getHost() . CMSIF_ASSETS . $_ext.'/'. $_file;
             switch($_ext)
             {
                 case 'css':
