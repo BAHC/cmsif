@@ -1,7 +1,7 @@
 <?php
 
 const EOL                = PHP_EOL;
-const CMSIF_VER          = '0.03b';
+const CMSIF_VER          = '0.04b';
 const CMSIF_TPL          = 'default';
 const CMSIF_ENCODING     = 'UTF-8';
 const CMSIF_COOKIE_LTIME = 3600;
@@ -23,6 +23,11 @@ const CMSIF_CSRF_HEADER_KEY    = 'X-CSRF-TOKEN';
 const CMSIF_CSRF_TOKEN_INVALID = 'Invalid CSRF-token.';
 
 const CMSIF_DEFAULT_AUTH_TYPE  = 'file';
+
+if(!defined('CMSIF_ASSETS'))
+{
+    define('CMSIF_ASSETS', '/');
+}
 
 $data = []; //global data container
 
@@ -148,17 +153,49 @@ function language_client()
     return $_language;
 }
 
+function filterSlashes($_opt=[])
+{
+    if(ini_get('magic_quotes_gpc'))
+    {
+    	$_opt = filter_strip_slashes($_opt);
+    }
+    return $_opt;
+}
+
+function filter_strip_slashes($_data)
+{
+    if(is_array($_data))
+    {
+		foreach($_data as $_k => $_v)
+		{
+		    $_data[filter_strip_slashes($_k)] = filter_strip_slashes($_v);
+		}
+	}
+	else
+	{
+        $_data = stripslashes($_data);
+	}
+
+	return $_data;
+}
+
 function filterGET()
 {
-    global $_GET;    
-    return filter($_GET);
+    global $_GET;
+    return filter(filterSlashes($_GET));
     
 }
 
 function filterPOST()
 {
     global $_POST;
-    return filter($_POST);
+    return filter(filterSlashes($_POST));
+}
+
+function filterCOOKIE()
+{
+    global $_COOKIE;
+    return filter(filterSlashes($_COOKIE));
 }
 
 function filterSERVER()
@@ -761,7 +798,7 @@ function error404()
     exit(0);
 }
 
-function asset($_asset = '')
+function asset($_asset = '', $_media='screen')
 {
     if(!empty($_asset))
     {
@@ -771,15 +808,15 @@ function asset($_asset = '')
         $_out = '';
         $_file = filterOne($_asset, ' .\/');
         $_ext = stringLow( pathinfo($_file, PATHINFO_EXTENSION) );
-        $_file_path = __DIR__ .'/'. $_ext .'/'.  $_file;
+        $_file_path = __DIR__ . CMSIF_ASSETS . $_ext .'/'.  $_file;
         
         if(file_exists($_file_path) && is_readable($_file_path))
         {
-            $_file_url = getHost() .'/'. $_ext.'/'. $_file;
+            $_file_url = getHost() . CMSIF_ASSETS . $_ext.'/'. $_file;
             switch($_ext)
             {
                 case 'css':
-                    $_out = '<link rel="stylesheet" type="text/css" href="'. $_file_url .'" media="screen">';
+                    $_out = '<link rel="stylesheet" type="text/css" href="'. $_file_url .'"'. ($_media ? ' media="'. $_media .'"' : '') .'>';
                     break;
                 case 'js':
                     $_out = '<script src="'. $_file_url .'"></script>';
