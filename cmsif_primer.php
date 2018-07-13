@@ -51,7 +51,7 @@ router('get', '/article/([0-9]*)', function($_matches){
 router('get', '/', function(){
 	assetExternal('http://necolas.github.com/normalize.css');
 	assetExternal('//fonts.googleapis.com/css?family=Roboto', 'css');
-	asset('style.css');
+	asset('style.css', ['version'=>'v123']);
 
 	$_form_fields = [
 		'text'     => '{"name": "username", "id": "Username"}',
