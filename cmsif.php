@@ -1,7 +1,7 @@
 <?php
 
 const EOL                = PHP_EOL;
-const CMSIF_VER          = '0.05b';
+const CMSIF_VER          = '0.06b';
 const CMSIF_TPL          = 'default';
 const CMSIF_ENCODING     = 'UTF-8';
 const CMSIF_COOKIE_LTIME = 3600;
@@ -82,16 +82,27 @@ function init()
     //dbConnect();
 }
 
+/**
+ * Get User Preferred Language or default
+ *
+ * @return string Useragent Language guess
+ */
 function languageGet()
 {
     return dataGet('language', CMSIF_DEFAULT_LANG);
 }
 
+/**
+ * Set Language
+ *
+ * @param string $_default_language
+ * @return void
+ */
 function languageSet($_default_language=CMSIF_DEFAULT_LANG)
 {
     $_lang = $_default_language;
-    $_languages_client = language_client();
-    $_languages = language_mapping($_lang);
+    $_languages_client = _language_client();
+    $_languages = _language_mapping($_lang);
 
     foreach($_languages_client as $l => $v)
     {
@@ -105,7 +116,13 @@ function languageSet($_default_language=CMSIF_DEFAULT_LANG)
     dataSet('language', $_lang);
 }
 
-function language_mapping($_default_language)
+/**
+ * Language mapping - supporting function
+ *
+ * @param string $_default_language
+ * @return array $_languages
+ */
+function _language_mapping($_default_language)
 {
     $_languages = [];
     $_langs_mapping = dataGet('languages', [$_default_language=>$_default_language]);
@@ -130,60 +147,73 @@ function language_mapping($_default_language)
     return $_languages;
 }
 
-function language_client()
+/**
+ * Useragent Preferred Languages - supporting function
+ *
+ * @return array $_languages
+ */
+function _language_client()
 {
-    $_language = [];
+    $_languages = [];
     
     if($list = stringLow( getHeader('http-accept-language') ))
     {
         
         if(preg_match_all('/([a-z]{1,8}(?:-[a-z]{1,8})?)(?:;q=([0-9.]+))?/', $list, $list))
         {
-            $_language = array_combine($list[1], $list[2]);
+            $_languages = array_combine($list[1], $list[2]);
 
-            foreach ($_language as $n => $v)
+            foreach ($_languages as $n => $v)
             {
-                $_language[$n] = $v ? $v : 1;
+                $_languages[$n] = $v ? $v : 1;
             }
 
-            arsort($_language, SORT_NUMERIC);
+            arsort($_languages, SORT_NUMERIC);
         }
     }
 
-    return $_language;
+    return $_languages;
 }
 
+/**
+ * Strip Slashes If Magic Quotes ON
+ *
+ * @return array|string $_opt
+ */
 function filterSlashes($_opt=[])
 {
     if(ini_get('magic_quotes_gpc'))
     {
-    	$_opt = filter_strip_slashes($_opt);
+    	$_opt = _filter_strip_slashes($_opt);
     }
     return $_opt;
 }
 
-function filter_strip_slashes($_data)
+/**
+ * Multidimensional Strip Slashes - supporting function
+ *
+ * @return array|string $_opt
+ */
+function _filter_strip_slashes($_opt)
 {
-    if(is_array($_data))
+    if(is_array($_opt) && count($_opt))
     {
-        foreach($_data as $_k => $_v)
+        foreach($_opt as $_k => $_v)
         {
-            $_data[filter_strip_slashes($_k)] = filter_strip_slashes($_v);
+            $_opt[_filter_strip_slashes($_k)] = _filter_strip_slashes($_v);
         }
     }
     else
     {
-        $_data = stripslashes($_data);
+        $_opt = stripslashes($_opt);
     }
-
-    return $_data;
+    return $_opt;
 }
 
 function filterGET()
 {
     global $_GET;
     return filter(filterSlashes($_GET));
-    
 }
 
 function filterPOST()
@@ -207,14 +237,12 @@ function filterSERVER()
         $_server[stringLow($_key)] = $_value;
         $_server[stringLow(str_replace('_', '-', $_key))] = $_value;
     }
-
     return $_server;
 }
 
-
-function filter($_var=[], $_filter = " \t\n\r\0\x0B")
+function filter($_var=[], $_filter = " \t\n\r\0\x0B", $_default = '')
 {
-    if(count($_var))
+    if(is_array($_var) && count($_var))
     {
         foreach($_var as $_key=>$_value)
         {
@@ -241,13 +269,12 @@ function filter($_var=[], $_filter = " \t\n\r\0\x0B")
             }
         }
     }
+    else
+    {
+        $_var = filter([$_var=>$_var], $_filter);
+        return array_pop( $_var );
+    }
     return $_var;
-}
-
-function filterOne($_var, $_filter = " \t\n\r\0\x0B", $_default = '')
-{
-    $_var = filter([$_var=>$_var], $_filter);
-    return array_pop( $_var );
 }
 
 function cookie($_name='')
@@ -334,15 +361,16 @@ function sessionUnset(){
 function fileRead($_file = '', $_format = 'plain') //plain, html, json
 {
     $_file_path = filePath($_file);
+
     if(!empty($_file_path))
     {
         if( !file_exists($_file_path) || !is_readable($_file_path) )
         {
             return null;
         }
-        
+
         $_content = file_get_contents( $_file_path );
-        
+
         switch($_format)
         {
             case 'html':
@@ -352,15 +380,15 @@ function fileRead($_file = '', $_format = 'plain') //plain, html, json
                 $_content = json_decode( $_content , true);
                 break;
         }
-        
         return $_content;
     }
+    return false;
 }
 
 function fileWrite($_file = '', $_opt = '', $_format = 'plain')
 {
-    
     $_file_path = filePath($_file);
+
     if(!empty($_file_path))
     {
         $e = fopen($_file_path, 'w');
@@ -383,7 +411,7 @@ function fileWrite($_file = '', $_opt = '', $_format = 'plain')
 function filePath($_file)
 {
     $_file_path = '';
-    $_file = filterOne($_file, ' ./');
+    $_file = filter($_file, ' ./');
     if(!empty($_file))
     {
         $_file_path = CMSIF_FILES. $_file;
@@ -781,11 +809,11 @@ function renderTemplate($_template = '')
 
 function renderBlock($_block='', $_name='')
 {
+    $_blocks = dataGet('blocks', []);
     if(empty($_name))
     {
-        $_name = 'block_'. uniqid();
+        $_name = 'block_'. (count($_blocks) + 1);
     }
-    $_blocks = dataGet('blocks', []);
     $_blocks[ $_name ] = $_block;
     dataSet('blocks', $_blocks);
     return true;
@@ -813,7 +841,7 @@ function asset($_asset = '', $_opt=[])
         $_version     = isset($_opt['version'])? $_opt['version']: null;
 
         $_out = '';
-        $_file = filterOne($_asset, ' .\/');
+        $_file = filter($_asset, ' .\/');
         $_ext = stringLow( pathinfo($_file, PATHINFO_EXTENSION) );
         $_file_path = __DIR__ .'/'. $_ext .'/'.  $_file;
         $_file_url  = getHost() . CMSIF_ASSETS . $_ext.'/'. $_file .(!is_null($_version)? '?'.$_version:'');
