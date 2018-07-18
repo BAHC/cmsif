@@ -4,19 +4,21 @@ const EOL                = PHP_EOL;
 const CMSIF_VER          = '0.06b';
 const CMSIF_TPL          = 'default';
 const CMSIF_ENCODING     = 'UTF-8';
-const CMSIF_COOKIE_LTIME = 3600;
-const CMSIF_TIMEZONE     = 'Europe/Moscow';
-const CMSIF_DEFAULT_LANG = 'en';
 
-const CMSIF_FILES        = __DIR__.'/__FILES__/';
-const CMSIF_MODULES      = __DIR__.'/__MODULES__/';
-const CMSIF_TEMPLATES    = __DIR__.'/__TEMPLATES__/';
+if(!defined('CMSIF_WEBROOT')) define('CMSIF_WEBROOT', __DIR__);
+if(!defined('CMSIF_COOKIE_LTIME')) define('CMSIF_COOKIE_LTIME', 3600);
+if(!defined('CMSIF_TIMEZONE')) define('CMSIF_TIMEZONE', 'Europe/Moscow');
+if(!defined('CMSIF_DEFAULT_LANG')) define('CMSIF_DEFAULT_LANG', 'en');
+
+if(!defined('CMSIF_FILES')) define('CMSIF_FILES', __DIR__.'/__FILES__/');
+if(!defined('CMSIF_MODULES')) define('CMSIF_MODULES', __DIR__.'/__MODULES__/');
+if(!defined('CMSIF_TEMPLATES')) define('CMSIF_TEMPLATES', __DIR__.'/__TEMPLATES__/');
 
 //DB
-const CMSIF_DB_HOST      = 'localhost';
-const CMSIF_DB_USER      = 'root';
-const CMSIF_DB_PASS      = 'toor';
-const CMSIF_DB_NAME      = 'app';
+if(!defined('CMSIF_DB_HOST')) define('CMSIF_DB_HOST', 'localhost');
+if(!defined('CMSIF_DB_USER')) define('CMSIF_DB_USER', 'root');
+if(!defined('CMSIF_DB_PASS')) define('CMSIF_DB_PASS', 'toor');
+if(!defined('CMSIF_DB_NAME')) define('CMSIF_DB_NAME', 'app');
 
 const CMSIF_CSRF_POST_KEY      = 'csrf-token';
 const CMSIF_CSRF_HEADER_KEY    = 'X-CSRF-TOKEN';
@@ -843,7 +845,7 @@ function asset($_asset = '', $_opt=[])
         $_out = '';
         $_file = filter($_asset, ' .\/');
         $_ext = stringLow( pathinfo($_file, PATHINFO_EXTENSION) );
-        $_file_path = __DIR__ .'/'. $_ext .'/'.  $_file;
+        $_file_path = CMSIF_WEBROOT .'/'. $_ext .'/'.  $_file;
         $_file_url  = getHost() . CMSIF_ASSETS . $_ext.'/'. $_file .(!is_null($_version)? '?'.$_version:'');
 
         if(file_exists($_file_path) && is_readable($_file_path))
