@@ -14,7 +14,7 @@ router('get', '/main', function(){
 
     echo 'User: ', getUser(), '<br />'.EOL;
 	echo date_default_timezone_get(), '<br />'.EOL;
-	echo cookie('language'), '<br />'.EOL;
+	echo cookieGet('language'), '<br />'.EOL;
 	echo version(), '<br />'.EOL;
 	echo getId(), '<br />'.EOL;
 	echo getModule(), '<br />'.EOL;
