@@ -1,12 +1,14 @@
 <?php
 
 const EOL                = PHP_EOL;
-const CMSIF_VER          = '0.06b';
+const CMSIF_VER          = '0.07b';
 const CMSIF_TPL          = 'default';
 const CMSIF_ENCODING     = 'UTF-8';
 
+if(!defined('CMSIF_SESSION_ID')) define('CMSIF_SESSION_ID', 'CMSIF');
+
 if(!defined('CMSIF_WEBROOT')) define('CMSIF_WEBROOT', __DIR__);
-if(!defined('CMSIF_COOKIE_LTIME')) define('CMSIF_COOKIE_LTIME', 3600);
+if(!defined('CMSIF_COOKIE_LTIME')) define('CMSIF_COOKIE_LTIME', 86400);
 if(!defined('CMSIF_TIMEZONE')) define('CMSIF_TIMEZONE', 'Europe/Moscow');
 if(!defined('CMSIF_DEFAULT_LANG')) define('CMSIF_DEFAULT_LANG', 'en');
 
@@ -43,6 +45,8 @@ function init()
     dataSet('route', 'error404');
 
     dataSet('auth_types', ['file', 'http', 'db']);
+
+    sessionStart();
 
     /**
      * HTML Language Code Reference
@@ -282,7 +286,7 @@ function filter($_var=[], $_filter = " \t\n\r\0\x0B", $_default = '')
     return $_var;
 }
 
-function cookie($_name='')
+function cookieGet($_name='')
 {
     global $_COOKIE;
     $_value = null;
@@ -318,17 +322,27 @@ function cookieDelete($_name='')
     }
 }
 
+function sessionStart()
+{
+    global $_SESSION; 
+    if (!isset($_SESSION['safety']))
+    {
+        //session_regenerate_id(true);
+        session_id(CMSIF_SESSION_ID);
+        session_start([
+            'cookie_lifetime' => CMSIF_COOKIE_LTIME
+        ]);
+        $_SESSION['safety'] = true;
+    }
+    $_SESSION['sessionid'] = session_id();
+}
 
-function session($_key='')
+function sessionGet($_key='')
 {
     global $_SESSION;
-    if(!session_id()){ 
-        session_start(); 
-    }
     if(isset($_SESSION[$_key]))
     {
-        $_value = unserialize(base64_decode($_SESSION[$_key]));
-        return $_value;
+        return $_SESSION[$_key];
     }
     return null;
 }
@@ -336,16 +350,13 @@ function session($_key='')
 function sessionSet($_key='', $_value='')
 {
     global $_SESSION;
-    if(!session_id()){ 
-        $_SESSION[$_key] = base64_encode(serialize($_value));
-    }
-    return null;
+    $_SESSION[$_key] = $_value;
 }
 
 function sessionDelete($key='')
 {
     global $_SESSION;
-    if (session_id() && !empty($key)) 
+    if (!empty($key)) 
     {
         if(isset($_SESSION[$key]))
         {
@@ -357,7 +368,7 @@ function sessionDelete($key='')
 }
 
 function sessionUnset(){
-    if(!session_id())
+    if(!empty(session_id()))
     {
         session_unset();
     }
