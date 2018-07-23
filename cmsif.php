@@ -273,8 +273,11 @@ function filter($_var=[], $_filter = " \t\n\r\0\x0B", $_default = '')
     }
     else
     {
-        $_var = filter([$_var=>$_var], $_filter);
-        return array_pop( $_var );
+        if(!empty($_var))
+        {
+            $_var = filter([$_var=>$_var], $_filter);
+            return array_pop( $_var );
+        }
     }
     return $_var;
 }
