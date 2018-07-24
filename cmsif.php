@@ -190,7 +190,7 @@ function filterSlashes($_opt=[])
 {
     if(ini_get('magic_quotes_gpc'))
     {
-    	$_opt = _filter_strip_slashes($_opt);
+        $_opt = _filter_strip_slashes($_opt);
     }
     return $_opt;
 }
@@ -531,9 +531,9 @@ function dbh()
 
 function dbQuery($_query, $_opt=[])
 {
-	if(empty($_query)){ return null; }
+    if(empty($_query)){ return null; }
 
-	$_out = [];
+    $_out = [];
     
     if(is_array($_query) && count($_query))
     {
@@ -541,22 +541,22 @@ function dbQuery($_query, $_opt=[])
     }
     else
     {
-	    $_result = mysqli_query(dbh(), $_query);
-	    while ($_row = mysqli_fetch_assoc($_result))
-	    {
-		    $_out[] = $_row;
-		}
-		mysqli_free_result($_result);
-	}
-	
-	return $_out;
+        $_result = mysqli_query(dbh(), $_query);
+        while ($_row = mysqli_fetch_assoc($_result))
+        {
+            $_out[] = $_row;
+        }
+        mysqli_free_result($_result);
+    }
+
+    return $_out;
 }
 
 function dbMultiQuery($_query, $_opt=[])
 {
-	if(empty($_query)){ return null; }
+    if(empty($_query)){ return null; }
 
-	$_out = [];
+    $_out = [];
 
     $query = implode(';', $_query);
 
@@ -746,10 +746,10 @@ function authHTTP($_name='')
 function headerHTML()
 {
     headers(['Content-Type: text/html; charset='.CMSIF_ENCODING]);
-    echo view(['<!DOCTYPE html>', '<html>', '<head><meta charset="'.CMSIF_ENCODING.'"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>']);
+    echo _view(['<!DOCTYPE html>', '<html>', '<head><meta charset="'.CMSIF_ENCODING.'"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>']);
 }
 
-function view($_content='')
+function _view($_content='')
 {
     $_out = '';
     
@@ -757,32 +757,33 @@ function view($_content='')
     {
         foreach($_content as $_content_part)
         {
-            $_out .= view($_content_part);
+            $_out .= _view($_content_part);
         }
     }
     else
     {
         if(!empty($_content)) 
         {
-            $_out .= $_content. EOL;    
+            $_out .= $_content. EOL;
         }
     }
     return $_out;
 }
 
-function renderHTML($_template = 'main', $_content = '')
+function renderView($_template = 'main', $_content = '')
 {
     $_render_template = renderTemplate($_template);
 
     if(is_array($_content))
     {
-        $_content = view($_content);
+        $_content = _view($_content);
     }
 
     $_assets          = '';
     $_assets_external = dataGet('assets_external', []);
     $_assets_local    = dataGet('assets_local', []);
     $_blocks          = dataGet('blocks', []);
+    $_partials        = dataGet('partials', []);
     $_assets_out      = [];
 
     if(count($_assets_external))
@@ -794,7 +795,7 @@ function renderHTML($_template = 'main', $_content = '')
     {
         $_assets_out[] = implode(EOL, $_assets_local);
     }
-    
+
     $_assets = implode(EOL, $_assets_out);
 
     if(count($_blocks))
@@ -804,7 +805,15 @@ function renderHTML($_template = 'main', $_content = '')
             $_content .= sprintf('<div id="%s">%s</div>', $_id, $_block);
         }
     }
-    //$_content = implode(EOL, $_blocks);
+
+    if(count($_partials))
+    {
+        foreach($_partials as $_id=>$_partial)
+        {
+            $_token = '%'.$_id.'%';
+            $_content = str_replace( $_token, $_partial, $_content);
+        }
+    }
 
     headerHTML();
     @include( $_render_template );
@@ -832,6 +841,18 @@ function renderBlock($_block='', $_name='')
     }
     $_blocks[ $_name ] = $_block;
     dataSet('blocks', $_blocks);
+    return true;
+}
+
+function renderPartial($_partial='', $_name='')
+{
+    $_partials = dataGet('partials', []);
+    if(empty($_name))
+    {
+        $_name = 'partial_'. (count($_partials) + 1);
+    }
+    $_partials[ $_name ] = $_partial;
+    dataSet('partials', $_partials);
     return true;
 }
 
