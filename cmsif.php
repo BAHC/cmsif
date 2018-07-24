@@ -909,6 +909,8 @@ function assetExternal($_asset = '', $_opt=[])
         $_options .= $_integrity? ' integrity="'.$_integrity.'"':'';
         $_options .= $_crossorigin? ' crossorigin="'.$_crossorigin.'"':'';
 
+        $_out = '';
+
         switch($_ext)
         {
             case 'css':
