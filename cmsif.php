@@ -1,7 +1,7 @@
 <?php
 
 const EOL                = PHP_EOL;
-const CMSIF_VER          = '0.07b';
+const CMSIF_VER          = '0.08b';
 const CMSIF_TPL          = 'default';
 const CMSIF_ENCODING     = 'UTF-8';
 
@@ -353,7 +353,7 @@ function sessionSet($_key='', $_value='')
     $_SESSION[$_key] = $_value;
 }
 
-function sessionDelete($key='')
+function sessionFlush($key='')
 {
     global $_SESSION;
     if (!empty($key)) 
@@ -424,15 +424,44 @@ function fileWrite($_file = '', $_opt = '', $_format = 'plain')
     return false;
 }
 
-function filePath($_file)
+function filePath($_file, $_base = '')
 {
     $_file_path = '';
     $_file = filter($_file, ' ./');
     if(!empty($_file))
     {
-        $_file_path = CMSIF_FILES. $_file;
+        $_file_path = (!empty($_base)? $_base : CMSIF_FILES) . $_file;
     }
     return $_file_path;
+}
+
+function fileExecute($_file = '', $_opt=[])
+{
+    $_type = null;
+    $_out = '';
+    if(!empty($_file))
+    {
+        extract($_opt);
+        if(!isset($_type)) $_type = 'template';
+        if ('module' == $_type) 
+        {
+            $_file = filePath($_file, CMSIF_MODULES);
+        }
+        else if(in_array( $_type, ['template', 'partial']))
+        {
+            $_file = filePath($_file, CMSIF_TEMPLATES);
+        }
+        else
+        {
+            $_file = filePath($_file);
+        }
+
+        ob_start();
+            include $_file;
+            $_out = ob_get_contents();
+        ob_clean();
+    }
+    return $_out;
 }
 
 function router($_method=null, $_match_path='/', $_call)
@@ -802,21 +831,28 @@ function renderView($_template = 'main', $_content = '')
     {
         foreach($_blocks as $_id=>$_block)
         {
-            $_content .= sprintf('<div id="%s">%s</div>', $_id, $_block);
+            if(in_array($_block['type'], ['header', 'aside', 'article', 'section', 'footer']))
+            {
+                $_content .= '<'.$_id.'>'. $_block['content'].'</'.$_id.'>'.EOL;
+            }
+            else
+            {
+                $_content .= sprintf('<div id="%s">%s</div>', $_id, $_block['content']). EOL;
+            }
         }
     }
 
     if(count($_partials))
     {
-        foreach($_partials as $_id=>$_partial)
+        foreach($_partials as $_search => $_partial)
         {
-            $_token = '%'.$_id.'%';
-            $_content = str_replace( $_token, $_partial, $_content);
+            $_content = str_replace( $_search, $_partial, $_content);
         }
     }
 
     headerHTML();
-    @include( $_render_template );
+
+    echo fileExecute( $_render_template, compact('_assets', '_content') );
 }
 
 function renderTemplate($_template = '')
@@ -824,7 +860,7 @@ function renderTemplate($_template = '')
     $_file_path = CMSIF_TEMPLATES.'/'.$_template.'.php';
     if (file_exists($_file_path) && is_readable($_file_path))
     {
-        return $_file_path;
+        return '/'.$_template.'.php';
     }
     else
     {
@@ -832,14 +868,14 @@ function renderTemplate($_template = '')
     }
 }
 
-function renderBlock($_block='', $_name='')
+function renderBlock($_block='', $_name='', $_type='block')
 {
     $_blocks = dataGet('blocks', []);
     if(empty($_name))
     {
         $_name = 'block_'. (count($_blocks) + 1);
     }
-    $_blocks[ $_name ] = $_block;
+    $_blocks[ $_name ] = ['content'=>$_block, 'type'=>'block'];
     dataSet('blocks', $_blocks);
     return true;
 }
@@ -851,7 +887,7 @@ function renderPartial($_partial='', $_name='')
     {
         $_name = 'partial_'. (count($_partials) + 1);
     }
-    $_partials[ $_name ] = $_partial;
+    $_partials[ '{{ '.$_name.' }}' ] = $_partial;
     dataSet('partials', $_partials);
     return true;
 }
