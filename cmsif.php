@@ -775,7 +775,7 @@ function authHTTP($_name='')
 function headerHTML()
 {
     headers(['Content-Type: text/html; charset='.CMSIF_ENCODING]);
-    echo _view(['<!DOCTYPE html>', '<html>', '<head><meta charset="'.CMSIF_ENCODING.'"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>']);
+    echo _view(['<!DOCTYPE html>', '<html>', '<head><meta charset="'.CMSIF_ENCODING.'"><meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no"></head>']);
 }
 
 function _view($_content='')
