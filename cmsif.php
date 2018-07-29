@@ -555,7 +555,7 @@ function dbh()
         $dbh = dbConnect();
         dataSet('dbh', $dbh);
     }
-    return $dbh;    
+    return $dbh;
 }
 
 function dbQuery($_query, $_opt=[])
@@ -571,11 +571,21 @@ function dbQuery($_query, $_opt=[])
     else
     {
         $_result = mysqli_query(dbh(), $_query);
-        while ($_row = mysqli_fetch_assoc($_result))
+        if(!$_result)
         {
-            $_out[] = $_row;
+            if(!empty(dbh()->error))
+            {
+                dump([$_query, dbh()->error]);
+            }
         }
-        mysqli_free_result($_result);
+        else
+        {
+            while ($_row = mysqli_fetch_assoc($_result))
+            {
+                $_out[] = $_row;
+            }
+            mysqli_free_result($_result);
+        }
     }
 
     return $_out;
@@ -595,11 +605,21 @@ function dbMultiQuery($_query, $_opt=[])
         {
             /* store first result set */
             if($_result = mysqli_store_result(dbh())) {
-                while($_row = mysqli_fetch_assoc($_result))
+                if(!$_result)
                 {
-                    $_out[] = $_row;
+                    if(!empty(dbh()->error))
+                    {
+                        dump([$_query, dbh()->error]);
+                    }
                 }
-                mysqli_free_result($_result);
+                else 
+                {
+                    while($_row = mysqli_fetch_assoc($_result))
+                    {
+                        $_out[] = $_row;
+                    }
+                    mysqli_free_result($_result);
+                }
             }
         }
         while (@mysqli_next_result(dbh()));
@@ -880,8 +900,9 @@ function renderBlock($_block='', $_name='', $_type='block')
     return true;
 }
 
-function renderPartial($_partial='', $_name='')
+function renderPartial($_partial='', $_name='', $_opt = [])
 {
+    $_partial = fileExecute('_partials/'.$_partial.'.php', $_opt);
     $_partials = dataGet('partials', []);
     if(empty($_name))
     {
