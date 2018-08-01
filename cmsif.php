@@ -643,10 +643,17 @@ function dbDisconnect()
     return mysqli_close(dbh());
 }
 
-
-function csrf_token()
+function CSRFToken($_name='CSRFToken')
 {
-    
+    $_key = base64_encode(uniqid());
+    sessionSet($_name, $_key);
+    return $_key;
+}
+
+function CSRFTokenCheck($_name='CSRFToken', $_value)
+{
+    $_key = sessionGet($_name);
+    return ($_key === $_value);
 }
 
 function getHeader($_key='', $_default = null)
