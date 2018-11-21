@@ -786,7 +786,7 @@ function auth($_type=CMSIF_DEFAULT_AUTH_TYPE)
     }
     else
     {
-        renderHTML('error', 'Wrong Auth Type Selected!');
+        renderView('error', 'Wrong Auth Type Selected!');
     }
 }
 
@@ -902,7 +902,7 @@ function renderBlock($_block='', $_name='', $_type='block')
     {
         $_name = 'block_'. (count($_blocks) + 1);
     }
-    $_blocks[ $_name ] = ['content'=>$_block, 'type'=>'block'];
+    $_blocks[ $_name ] = ['content'=>$_block, 'type'=>$_type];
     dataSet('blocks', $_blocks);
     return true;
 }
