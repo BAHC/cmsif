@@ -1,50 +1,52 @@
 <?php
 
 const EOL                = PHP_EOL;
-const CMSIF_VER          = '0.08b';
+const CMSIF_VER          = '0.09b';
 const CMSIF_TPL          = 'default';
 const CMSIF_ENCODING     = 'UTF-8';
 
-if(!defined('CMSIF_SESSION_ID')) define('CMSIF_SESSION_ID', 'CMSIF');
+if (!defined('CMSIF_SESSION_ID')) { define('CMSIF_SESSION_ID', 'CMSIF'); }
 
-if(!defined('CMSIF_WEBROOT')) define('CMSIF_WEBROOT', __DIR__);
-if(!defined('CMSIF_COOKIE_LTIME')) define('CMSIF_COOKIE_LTIME', 86400);
-if(!defined('CMSIF_TIMEZONE')) define('CMSIF_TIMEZONE', 'Europe/Moscow');
-if(!defined('CMSIF_DEFAULT_LANG')) define('CMSIF_DEFAULT_LANG', 'en');
+if (!defined('CMSIF_WEBROOT')) { define('CMSIF_WEBROOT', __DIR__); }
+if (!defined('CMSIF_COOKIE_LTIME')) { define('CMSIF_COOKIE_LTIME', 86400); }
+if (!defined('CMSIF_TIMEZONE')) { define('CMSIF_TIMEZONE', 'Europe/Moscow'); }
+if (!defined('CMSIF_DEFAULT_LANG')) { define('CMSIF_DEFAULT_LANG', 'en'); }
 
-if(!defined('CMSIF_FILES')) define('CMSIF_FILES', __DIR__.'/__FILES__/');
-if(!defined('CMSIF_MODULES')) define('CMSIF_MODULES', __DIR__.'/__MODULES__/');
-if(!defined('CMSIF_TEMPLATES')) define('CMSIF_TEMPLATES', __DIR__.'/__TEMPLATES__/');
+if (!defined('CMSIF_FILES')) { define('CMSIF_FILES', __DIR__.'/__FILES__/'); }
+if (!defined('CMSIF_MODULES')) { 
+    define('CMSIF_MODULES', __DIR__.'/__MODULES__/'); 
+}
+if (!defined('CMSIF_TEMPLATES')) { 
+    define('CMSIF_TEMPLATES', __DIR__.'/__TEMPLATES__/'); 
+}
 
 //DB
-if(!defined('CMSIF_DB_HOST')) define('CMSIF_DB_HOST', 'localhost');
-if(!defined('CMSIF_DB_USER')) define('CMSIF_DB_USER', 'root');
-if(!defined('CMSIF_DB_PASS')) define('CMSIF_DB_PASS', 'toor');
-if(!defined('CMSIF_DB_NAME')) define('CMSIF_DB_NAME', 'app');
+if (!defined('CMSIF_DB_HOST')) { define('CMSIF_DB_HOST', 'localhost'); }
+if (!defined('CMSIF_DB_USER')) { define('CMSIF_DB_USER', 'root'); }
+if (!defined('CMSIF_DB_PASS')) { define('CMSIF_DB_PASS', 'toor'); }
+if (!defined('CMSIF_DB_NAME')) { define('CMSIF_DB_NAME', 'app'); }
 
 const CMSIF_CSRF_POST_KEY      = 'csrf-token';
 const CMSIF_CSRF_HEADER_KEY    = 'X-CSRF-TOKEN';
 const CMSIF_CSRF_TOKEN_INVALID = 'Invalid CSRF-token.';
 
-const CMSIF_DEFAULT_AUTH_TYPE  = 'file';
-
-if(!defined('CMSIF_ASSETS'))
-{
-    define('CMSIF_ASSETS', '/');
+const CMSIF_AUTH_TYPES  = ['file', 'http', 'db'];
+if (!defined('CMSIF_DEFAULT_AUTH_TYPE')) { 
+    define('CMSIF_DEFAULT_AUTH_TYPE', 'file');
 }
+
+if (!defined('CMSIF_ASSETS')) { define('CMSIF_ASSETS', '/'); }
 
 $data = []; //global data container
 
 function init()
 {
-    if(!defined('CMSIF_SYSTEM_NAME'))
-    {
+    if (!defined('CMSIF_SYSTEM_NAME')) {
         define('CMSIF_SYSTEM_NAME' , 'CMSIF ver. '. version());
     }
 
+    /* Default route */
     dataSet('route', 'error404');
-
-    dataSet('auth_types', ['file', 'http', 'db']);
 
     sessionStart();
 
@@ -69,22 +71,22 @@ function init()
     ]);
 
     languageSet();
-    
+
     // Set timezone to default, falls back to system if php.ini not set
     date_default_timezone_set(CMSIF_TIMEZONE); //@date_default_timezone_get()
-    
+
     // Set internal encoding if mbstring loaded
     if (!extension_loaded('mbstring')) {
         die("'mbstring' extension is not loaded.");
     }
-    
+
     mb_internal_encoding(CMSIF_ENCODING); 
     mb_http_output(CMSIF_ENCODING); 
     mb_http_input(CMSIF_ENCODING); 
     mb_regex_encoding(CMSIF_ENCODING);
-    
+
     cookieSet('language', languageGet());
-    
+
     //dbConnect();
 }
 
@@ -101,396 +103,368 @@ function languageGet()
 /**
  * Set Language
  *
- * @param string $_default_language
+ * @param string $default_language
  * @return void
  */
-function languageSet($_default_language=CMSIF_DEFAULT_LANG)
+function languageSet($default_language = CMSIF_DEFAULT_LANG)
 {
-    $_lang = $_default_language;
-    $_languages_client = _language_client();
-    $_languages = _language_mapping($_lang);
+    $language = $default_language;
+    $languages_client = language_client();
+    $languages = language_mapping($language);
 
-    foreach($_languages_client as $l => $v)
-    {
+    foreach ($languages_client as $l => $v) {
         $s = strtok($l, '-');
-        if(isset($_languages[$s]))
-        {
-            $_lang = $_languages[$s];
+        if (isset($languages[$s])) {
+            $language = $languages[$s];
         }
     }
 
-    dataSet('language', $_lang);
+    dataSet('language', $language);
 }
 
 /**
  * Language mapping - supporting function
  *
- * @param string $_default_language
- * @return array $_languages
+ * @param string $default_language
+ * @return array $languages
  */
-function _language_mapping($_default_language)
+function language_mapping($default_language)
 {
-    $_languages = [];
-    $_langs_mapping = dataGet('languages', [$_default_language=>$_default_language]);
+    $languages = [];
+    $langs_mapping = dataGet('languages', 
+        [$default_language=>$default_language]);
 
-    foreach($_langs_mapping as $_lang => $_alias)
-    {
-        $_lang = stringLow($_lang);
-        if(is_array($_alias))
-        {
-            foreach($_alias as $_alias_lang)
-            {
-                $_alias_lang = stringLow($_alias_lang);
-                $_languages[$_alias_lang] = $_lang;
+    foreach ($langs_mapping as $lang => $alias) {
+        $lang = stringLow($lang);
+        if (is_array($alias)) {
+            foreach ($alias as $alias_lang) {
+                $alias_lang = stringLow($alias_lang);
+                $languages[$alias_lang] = $lang;
             }
-        }
-        else
-        {
-            $_alias = stringLow($_alias);
-            $_languages[$_alias] = $_lang;
+        } else {
+            $alias = stringLow($alias);
+            $languages[$alias] = $lang;
         }
     }
-    return $_languages;
+
+    return $languages;
 }
 
 /**
  * Useragent Preferred Languages - supporting function
  *
- * @return array $_languages
+ * @return array $languages
  */
-function _language_client()
+function language_client()
 {
-    $_languages = [];
-    
-    if($list = stringLow( getHeader('http-accept-language') ))
-    {
-        
-        if(preg_match_all('/([a-z]{1,8}(?:-[a-z]{1,8})?)(?:;q=([0-9.]+))?/', $list, $list))
-        {
-            $_languages = array_combine($list[1], $list[2]);
+    $languages = [];
 
-            foreach ($_languages as $n => $v)
-            {
-                $_languages[$n] = $v ? $v : 1;
+    if ($list = stringLow( getHeader('http-accept-language') )) {
+        if (preg_match_all('/([a-z]{1,8}(?:-[a-z]{1,8})?)(?:;q=([0-9.]+))?/', 
+            $list, $list)) {
+            $languages = array_combine($list[1], $list[2]);
+            foreach ($languages as $n => $v) {
+                $languages[$n] = $v ? $v : 1;
             }
-
-            arsort($_languages, SORT_NUMERIC);
+            arsort($languages, SORT_NUMERIC);
         }
     }
 
-    return $_languages;
+    return $languages;
 }
 
 /**
  * Strip Slashes If Magic Quotes ON
  *
- * @return array|string $_opt
+ * @return array|string $opt
  */
-function filterSlashes($_opt=[])
+function filterSlashes($opt=[])
 {
-    if(ini_get('magic_quotes_gpc'))
-    {
-        $_opt = _filter_strip_slashes($_opt);
+    if (ini_get('magic_quotes_gpc')) {
+        $opt = filter_strip_slashes($opt);
     }
-    return $_opt;
+
+    return $opt;
 }
 
 /**
  * Multidimensional Strip Slashes - supporting function
  *
- * @return array|string $_opt
+ * @return array|string $opt
  */
-function _filter_strip_slashes($_opt)
+function filter_strip_slashes($opt)
 {
-    if(is_array($_opt) && count($_opt))
-    {
-        foreach($_opt as $_k => $_v)
-        {
-            $_opt[_filter_strip_slashes($_k)] = _filter_strip_slashes($_v);
+    if (is_array($opt) && count($opt)) {
+        foreach ($opt as $k => $v) {
+            $opt[filter_strip_slashes($k)] = filter_strip_slashes($v);
         }
+    } else {
+        $opt = stripslashes($opt);
     }
-    else
-    {
-        $_opt = stripslashes($_opt);
-    }
-    return $_opt;
+
+    return $opt;
 }
 
 function filterGET()
 {
-    global $_GET;
     return filter(filterSlashes($_GET));
 }
 
 function filterPOST()
 {
-    global $_POST;
     return filter(filterSlashes($_POST));
 }
 
 function filterCOOKIE()
 {
-    global $_COOKIE;
     return filter(filterSlashes($_COOKIE));
 }
 
 function filterSERVER()
 {
-    global $_SERVER;
-    $_server = [];
+    $server = [];
 
-    foreach ($_SERVER as $_key => $_value) {
-        $_server[stringLow($_key)] = $_value;
-        $_server[stringLow(str_replace('_', '-', $_key))] = $_value;
+    foreach ($_SERVER as $key => $value) {
+        $server[stringLow($key)] = $value;
+        $server[stringLow(str_replace('_', '-', $key))] = $value;
     }
-    return $_server;
+
+    return $server;
 }
 
-function filter($_var=[], $_filter = " \t\n\r\0\x0B", $_default = '')
+function filter($var=[], $filter = " \t\n\r\0\x0B", $default = '')
 {
-    if(is_array($_var) && count($_var))
-    {
-        foreach($_var as $_key=>$_value)
-        {
-            if(is_string($_value))
-            {
+    if (is_array($var) && count($var)) {
+        foreach ($var as $key=>$value) {
+            if (is_string($value)) {
                 // Translate HTML entities
-                $_value = strtr($_value, 
+                $value = strtr($value, 
                     array_flip(
                         get_html_translation_table(
                             HTML_ENTITIES, ENT_QUOTES
                         )
                     )
                 );
-                
+
                 // Remove multi whitespace
-                $_value = preg_replace("@\s+\s@Ui"," ",$_value);
-                $_value = trim($_value, $_filter);
-                if(empty($_value))
-                {
-                    unset($_var[$_key]);
-                } else { 
-                    $_var[$_key]=$_value;
+                $value = preg_replace("@\s+\s@Ui", " ", $value);
+                $value = trim($value, $filter);
+                if (empty($value)) {
+                    unset($var[$key]);
+                } else {
+                    $var[$key]=$value;
                 }
             }
         }
     }
     else
     {
-        if(!empty($_var))
+        if(!empty($var))
         {
-            $_var = filter([$_var=>$_var], $_filter);
-            return array_pop( $_var );
+            $var = filter([$var=>$var], $filter);
+            return array_pop( $var );
         }
     }
-    return $_var;
+
+    return $var;
 }
 
-function cookieGet($_name='')
+function cookieGet($name = '')
 {
-    global $_COOKIE;
-    $_value = null;
-    if(isset($_COOKIE[$_name]))
-    {
-        $_value = unserialize(base64_decode($_COOKIE[$_name]));
-    }
-    return $_value;
+    return (!empty($name) && isset($_COOKIE[$name]))? 
+        unserialize(base64_decode($_COOKIE[$name])): null;
 }
 
 /*
-setcookie ( string $name [, string $value = "" [, int $expire = 0 [, string $path = "" [, string $domain = "" [, bool $secure = FALSE [, bool $httponly = FALSE ]]]]]] )
+setcookie ( string $name [, 
+    string $value = "" [, 
+        int $expire = 0 [, 
+            string $path = "" [, 
+                string $domain = "" [, 
+                    bool $secure = FALSE [, 
+                        bool $httponly = FALSE 
+]]]]]] )
 */
-function cookieSet($_key='', $_value='', $_days = 1)
+function cookieSet($key='', $value='', $days = 1)
 {
-    if(!empty($_key) && !empty($_value))
-    {
-        $_value = base64_encode(serialize($_value));
-        $_expire = time()+ (60*60*24*( (int) $_days ));
-        setcookie($_key, $_value, $_expire);
+    if (!empty($key) && !empty($value)) {
+        $days = !empty($days)? (int) $days: 1;
+        $value = base64_encode(serialize($value));
+        $expire = time() + (60*60*24*$days);
+
+        return setcookie($key, $value, $expire);
     }
+
+    return false;
 }
 
-function cookieDelete($_name='')
+function cookieDelete($name)
 {
-    global $_COOKIE;
-    if (session_id()) 
-    {
-        if(isset($_COOKIE[$_name]))
-        {
-            setcookie($_name, "", time()-CMSIF_COOKIE_LTIME);
-        }
+    if (session_id() && !empty($name) && isset($_COOKIE[$name])) {
+        return setcookie($name, '', time() - CMSIF_COOKIE_LTIME);
     }
+
+    return false;
 }
 
 function sessionStart()
 {
-    global $_SESSION; 
-    if (!isset($_SESSION['safety']))
-    {
-        //session_regenerate_id(true);
+    if (!isset($_SESSION['safety'])) {
         session_id(CMSIF_SESSION_ID);
         session_start([
             'cookie_lifetime' => CMSIF_COOKIE_LTIME
         ]);
         $_SESSION['safety'] = true;
     }
+
     $_SESSION['sessionid'] = session_id();
 }
 
-function sessionGet($_key='')
+function sessionGet($key)
 {
-    global $_SESSION;
-    if(isset($_SESSION[$_key]))
-    {
-        return $_SESSION[$_key];
-    }
-    return null;
+    return (!empty($key) && isset($_SESSION[$key]))? $_SESSION[$key]: null;
 }
 
-function sessionSet($_key='', $_value='')
+function sessionSet($key = '', $value = '')
 {
-    global $_SESSION;
-    $_SESSION[$_key] = $_value;
+    if (!empty($key)) {
+        $_SESSION[$key] = $value;
+        return true;
+    }
+    return false;
 }
 
 function sessionFlush($key='')
 {
-    global $_SESSION;
-    if (!empty($key)) 
-    {
-        if(isset($_SESSION[$key]))
-        {
-            unset($_SESSION[$key]);
-            return true;
-        }
+    if (!empty($key) && isset($_SESSION[$key])) {
+        unset($_SESSION[$key]);
+        return true;
     }
+
     return false;
 }
 
-function sessionUnset(){
-    if(!empty(session_id()))
-    {
+function sessionUnset() 
+{
+    if (!empty(session_id())) {
         session_unset();
     }
 }
 
-function fileRead($_file = '', $_format = 'plain') //plain, html, json
+function fileRead($file = '', $format = 'plain') //plain, html, json
 {
-    $_file_path = filePath($_file);
+    $file_path = filePath($file);
 
-    if(!empty($_file_path))
+    if (!empty($file_path))
     {
-        if( !file_exists($_file_path) || !is_readable($_file_path) )
+        if (!file_exists($file_path) || !is_readable($file_path))
         {
             return null;
         }
 
-        $_content = file_get_contents( $_file_path );
+        $content = file_get_contents($file_path);
 
-        switch($_format)
+        switch ($format)
         {
             case 'html':
-                $_content = htmlentities( $_content );
+                $content = htmlentities($content);
                 break;
             case 'json':
-                $_content = json_decode( $_content , true);
+                $content = json_decode($content , true);
                 break;
         }
-        return $_content;
+
+        return $content;
     }
+
     return false;
 }
 
-function fileWrite($_file = '', $_opt = '', $_format = 'plain')
+function fileWrite($file = '', $opt = '', $format = 'plain')
 {
-    $_file_path = filePath($_file);
+    $file_path = filePath($file);
 
-    if(!empty($_file_path))
+    if (!empty($file_path))
     {
-        $e = fopen($_file_path, 'w');
-        if($e)
+        if($handle = fopen($file_path, 'w'))
         {
-            switch($_format)
+            switch ($format)
             {
                 case 'json':
-                    $_opt = json_encode($_opt);
+                    $opt = json_encode($opt);
                     break;
             }
-            
-            fwrite($e, $_opt );
-            return true;
+
+            return (bool) fwrite($handle, $opt);
         }
     }
+
     return false;
 }
 
-function filePath($_file, $_base = '')
+function filePath($file, $base = '')
 {
-    $_file_path = '';
-    $_file = filter($_file, ' ./');
-    if(!empty($_file))
-    {
-        $_file_path = (!empty($_base)? $_base : CMSIF_FILES) . $_file;
+    $file_path = '';
+    $file = filter($file, ' ./');
+    if (!empty($file)) {
+        $file_path = (!empty($base)? $base : CMSIF_FILES) . $file;
     }
-    return $_file_path;
+
+    return $file_path;
 }
 
-function fileExecute($_file = '', $_opt=[])
+function fileExecute($file = '', $opt = [])
 {
-    $_type = null;
-    $_out = '';
-    if(!empty($_file))
-    {
-        extract($_opt);
-        if(!isset($_type)) $_type = 'template';
-        if ('module' == $_type) 
-        {
-            $_file = filePath($_file, CMSIF_MODULES);
-        }
-        else if(in_array( $_type, ['template', 'partial']))
-        {
-            $_file = filePath($_file, CMSIF_TEMPLATES);
-        }
-        else
-        {
-            $_file = filePath($_file);
+    $out = '';
+
+    if (!empty($file)) {
+
+        $type = isset($opt['type'])? $opt['type']: 'template';
+
+        if ('module' == $type) {
+            $file = filePath($file, CMSIF_MODULES);
+        } else if (in_array($type, ['template', 'partial'])) {
+            $file = filePath($file, CMSIF_TEMPLATES);
+        } else {
+            $file = filePath($file);
         }
 
-        ob_start();
-            include $_file;
-            $_out = ob_get_contents();
-        ob_clean();
+        if (!empty($file)) {
+            ob_start();
+            extract($opt);
+            include $file;
+            $out = ob_get_contents();
+            ob_clean();
+        }
     }
-    return $_out;
+
+    return $out;
 }
 
-function router($_method=null, $_match_path='/', $_call)
+function router($method = null, $match_path = '/', $call)
 {
-    if($_method === getMethod())
-    {
-        if($_match_path === getUrl())
-        {
-            if(is_callable($_call))
-            {
-                is_string($_call) ? $_call() : call_user_func($_call);
+    if ($method === getMethod()) {
+        if ($match_path === getUrl()) {
+            if (is_callable($call)) {
+                is_string($call) ? $call() : call_user_func($call);
             } else {
-                require $_call;
+                require $call;
             }
-            dataSet('route', $_match_path);
+            dataSet('route', $match_path);
             exit;
         }
 
-        $_matches = [];
-        preg_match( '@^'.$_match_path.'@', getUrl(), $_matches);
-        if(!empty($_matches[1]) || $_match_path === getUrl())
+        $matches = [];
+        preg_match( '@^'.$match_path.'@', getUrl(), $matches);
+        if (!empty($matches[1]) || $match_path === getUrl())
         {
-            if(is_callable($_call))
+            if (is_callable($call))
             {
-                is_string($_call) ? $_call($_matches) : call_user_func($_call, $_matches);
+                is_string($call) ? $call($matches): call_user_func($call, $matches);
             } else {
-                require $_call;
+                require $call;
             }
-            dataSet('route', $_match_path);
+            dataSet('route', $match_path);
             exit;
         }
     }
@@ -514,128 +488,108 @@ function dump($option)
 
 function form($options=['method'=>'GET', 'action'=>'', 'fields'=>[]])
 {
-    $s_out = '<form action="'.(!empty($options['action'])? $options['action']: getUrl()).'" method="'.($options['method']).'">';
+    $form_elements = ['text', 'password', 'checkbox', 'select', 'submit'];
 
-    if(count($options['fields']))
-    {
-        foreach($options['fields'] as $_k=>$_v)
-        {
-            if(in_array($_k, ['text', 'password', 'checkbox', 'select', 'submit']))
-            {
-                $_vars = json_decode($_v, true);
-                if(!isset($_vars['name']) || empty($_vars['name']))
-                {
-                    $_vars['name'] = uniqid('name_');
+    $out = '<form action="'.(!empty($options['action'])? $options['action']: 
+        getUrl()).'" method="'.($options['method']).'">';
+
+    if (count($options['fields'])) {
+        foreach ($options['fields'] as $k=>$v) {
+            if (in_array($k, $form_elements)) {
+                $vars = json_decode($v, true);
+                if (!isset($vars['name']) || empty($vars['name'])) {
+                    $vars['name'] = uniqid('name_');
                 }
-
-                if(!isset($_vars['id']) || empty($_vars['id']))
-                {
-                    $_vars['id'] = uniqid('id_');
+                if (!isset($vars['id']) || empty($vars['id'])) {
+                    $vars['id'] = uniqid('id_');
                 }
-
-                $s_out .= '<input type="'.$_k.'" name="'.$_vars['name'].'" id="'.$_vars['id'].'" placeholder="'.$_vars['id'].'" value="'.('submit'==$_k? $_vars['id']: '').'">';
-            }
-            else
-            {
-                $s_out .= '<p class="alert">Unknown element: '.$_k.'</p>'.EOL;
+                $out .= '<input type="'.$k.'" name="'.$vars['name'].
+                    '" id="'.$vars['id'].'" placeholder="'.$vars['id'].
+                        '" value="'.('submit'==$k? $vars['id']: '').'">';
+            } else {
+                $out .= '<p class="alert">Unknown element: '.$k.'</p>'.EOL;
             }
         }
     }
 
-    $s_out .= '</form>';
+    $out .= '</form>';
 
-    renderBlock($s_out);
+    return $out;
 }
 
 function dbh()
 {
     $dbh = dataGet('dbh');
-    if(null == $dbh) 
-    { 
+    if (null == $dbh) { 
         $dbh = dbConnect();
         dataSet('dbh', $dbh);
     }
     return $dbh;
 }
 
-function dbQuery($_query, $_opt=[])
+function dbQuery($query, $opt = [])
 {
-    if(empty($_query)){ return null; }
+    if (empty($query)) { return null; }
 
-    $_out = [];
-    
-    if(is_array($_query) && count($_query))
-    {
-        $_out = dbMultiQuery($_query, $_opt);
-    }
-    else
-    {
-        $_result = mysqli_query(dbh(), $_query);
-        if(!$_result)
-        {
-            if(!empty(dbh()->error))
-            {
-                dump([$_query, dbh()->error]);
+    $out = [];
+
+    if (is_array($query) && count($query)) {
+        $out = dbMultiQuery($query, $opt);
+    } else {
+        $result = mysqli_query(dbh(), $query);
+        if (!$result) {
+            if (!empty(dbh()->error)) {
+                dump([$query, dbh()->error]);
             }
-        }
-        else
-        {
-            while ($_row = mysqli_fetch_assoc($_result))
-            {
-                $_out[] = $_row;
+        } else {
+            while ($row = mysqli_fetch_assoc($result)) {
+                $out[] = $row;
             }
-            mysqli_free_result($_result);
+            mysqli_free_result($result);
         }
     }
 
-    return $_out;
+    return $out;
 }
 
-function dbMultiQuery($_query, $_opt=[])
+function dbMultiQuery($query, $opt = [])
 {
-    if(empty($_query)){ return null; }
+    if (empty($query)) { return null; }
 
-    $_out = [];
+    $out = [];
 
-    $query = implode(';', $_query);
+    $query = implode(';', $query);
 
-    if(mysqli_multi_query(dbh(), $query))
-    {
-        do
-        {
+    if (mysqli_multi_query(dbh(), $query)) {
+        do {
             /* store first result set */
-            if($_result = mysqli_store_result(dbh())) {
-                if(!$_result)
-                {
-                    if(!empty(dbh()->error))
-                    {
-                        dump([$_query, dbh()->error]);
+            if ($result = mysqli_store_result(dbh())) {
+                if (!$result) {
+                    if (!empty(dbh()->error)) {
+                        dump([$query, dbh()->error]);
                     }
-                }
-                else 
-                {
-                    while($_row = mysqli_fetch_assoc($_result))
-                    {
-                        $_out[] = $_row;
+                } else {
+                    while ($row = mysqli_fetch_assoc($result)) {
+                        $out[] = $row;
                     }
-                    mysqli_free_result($_result);
+                    mysqli_free_result($result);
                 }
             }
         }
         while (@mysqli_next_result(dbh()));
     }
-    
-    return $_out;
+
+    return $out;
 }
 
 function dbConnect()
 {
-    $_dbh = new mysqli(CMSIF_DB_HOST, CMSIF_DB_USER, CMSIF_DB_PASS, CMSIF_DB_NAME);
+    $dbh = new mysqli(CMSIF_DB_HOST, CMSIF_DB_USER, CMSIF_DB_PASS, CMSIF_DB_NAME);
     if (mysqli_connect_errno()) {
-        dump("Connect failed: ". mysqli_connect_error(). EOL);
+        dump('Connect failed: '. mysqli_connect_error() . EOL);
         exit();
     }
-    return $_dbh;
+    return $dbh;
 }
 
 function dbDisconnect()
@@ -643,23 +597,23 @@ function dbDisconnect()
     return mysqli_close(dbh());
 }
 
-function CSRFToken($_name='CSRFToken')
+function CSRFToken($name = 'CSRFToken')
 {
-    $_key = base64_encode(uniqid());
-    sessionSet($_name, $_key);
-    return $_key;
+    $key = base64_encode(uniqid());
+    sessionSet($name, $key);
+    return $key;
 }
 
-function CSRFTokenCheck($_name='CSRFToken', $_value)
+function CSRFTokenCheck($name = 'CSRFToken', $value)
 {
-    $_key = sessionGet($_name);
-    return ($_key === $_value);
+    $key = sessionGet($name);
+    return ($key === $value);
 }
 
-function getHeader($_key='', $_default = null)
+function getHeader($key = '', $default = null)
 {
-    $_server = filterSERVER();
-    return (isset($_server[$_key]) && !empty($_server[$_key])? $_server[$_key]: $_default);
+    $server = filterSERVER();
+    return (isset($server[$key]) && !empty($server[$key])? $server[$key]: $default);
 }
 
 function getHeaders(){ return filterSERVER(); }
@@ -676,20 +630,20 @@ function getModule()
 
 function getMethod()
 {
-    $_method = getHeader('request-method');
-    return stringLow( $_method );
+    $method = getHeader('request-method');
+    return stringLow( $method );
 }
 
 function getUrl()
 {
-    $_url = explode('?', getHeader('request-uri'));
-    return $_url[0];
+    $url = explode('?', getHeader('request-uri'));
+    return $url[0];
 }
 
 function getHost()
 {
-    $_host = getHeader('http-host');
-    return stringLow( '//'.$_host );
+    $host = getHeader('http-host');
+    return stringLow( '//'.$host );
 }
 
 function getUser()
@@ -704,15 +658,16 @@ function getPassword()
 
 function getIp()
 {
-    $_ip = getHeader('http-cf-connecting-ip');
-    if ($_ip !== null) {
-        return $_ip;
+    $ip = getHeader('http-cf-connecting-ip');
+    if ($ip !== null) {
+        return $ip;
     }
-    
-    $_ip = getHeader('http-x-forwarded-for');
-    if ($_ip !== null) {
-        return $_ip;
+
+    $ip = getHeader('http-x-forwarded-for');
+    if ($ip !== null) {
+        return $ip;
     }
+
     return getHeader('remote-addr');
 }
 
@@ -732,30 +687,30 @@ function dataAll()
     return $data;
 }
 
-function dataIsset($_name)
+function dataIsset($name)
 {
     global $data;
-    return array_key_exists($_name, $data) === true;
+    return array_key_exists($name, $data) === true;
 }
 
-function dataSet($_name, $_value = null)
+function dataSet($name, $value = null)
 {
     global $data;
-    $data[$_name] = $_value;
+    $data[$name] = $value;
 }
 
-function dataGet($_name, $_default = null)
+function dataGet($name, $default = null)
 {
     global $data;
-    return isset($data[$_name]) ? $data[$_name]: $_default;
+    return isset($data[$name]) ? $data[$name]: $default;
 }
 
-function dataUnset($_name, $_value = null)
+function dataUnset($name, $value = null)
 {
     global $data;
-    if(dataIsset($_name))
+    if(dataIsset($name))
     {
-        unset($data[$_name]);
+        unset($data[$name]);
     }
 }
 
@@ -767,156 +722,161 @@ function headers($headers = [])
 }
 
 
-function auth($_type=CMSIF_DEFAULT_AUTH_TYPE)
+function auth($type = CMSIF_DEFAULT_AUTH_TYPE)
 {
-    if(in_array($_type, dataGet('auth_types')))
-    {
-        switch($_type)
-        {
+    if (in_array($type, CMSIF_AUTH_TYPES)) {
+        switch ($type) {
             case 'file':
-                
                 break;
+
             case 'db':
-                
                 break;
+
             case 'http':
                 authHTTP(CMSIF_SYSTEM_NAME);
                 break;
         }
-    }
-    else
-    {
+    } else {
         renderView('error', 'Wrong Auth Type Selected!');
     }
 }
 
-function authHTTP($_name='')
+function authHTTP($name = '')
 {
     headers([
-        'WWW-Authenticate: Basic realm="' . $_name . '"',
+        'WWW-Authenticate: Basic realm="'.$name.'"',
         'HTTP/1.0 401 Unauthorized',
     ]);
     exit(0);
 }
 
+function authTokenGenerate($length = 256) 
+{
+    $out = '';
+
+    $keys = array_merge(
+        ['^','-','#','&','%','@','?'],
+        [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        range('a', 'z'), range('A', 'Z')
+    );
+
+    for ($i = 0; $i < $length; $i++) 
+    {
+        $out .= $keys[mt_rand(0, count($keys) - 1)];
+    }
+
+    return $out;
+}
+
 function headerHTML()
 {
     headers(['Content-Type: text/html; charset='.CMSIF_ENCODING]);
-    echo _view(['<!DOCTYPE html>', '<html>', '<head><meta charset="'.CMSIF_ENCODING.'"><meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no"></head>']);
+    echo view(['<!DOCTYPE html>', '<html lang="en">', 
+        '<head><meta charset="'.CMSIF_ENCODING.'">'.
+        '<meta name="viewport" content="width=device-width, '.
+        'initial-scale=1, shrink-to-fit=no"></head>']);
 }
 
-function _view($_content='')
+function footerHTML()
 {
-    $_out = '';
-    
-    if(is_array($_content))
-    {
-        foreach($_content as $_content_part)
-        {
-            $_out .= _view($_content_part);
-        }
-    }
-    else
-    {
-        if(!empty($_content)) 
-        {
-            $_out .= $_content. EOL;
-        }
-    }
-    return $_out;
+    echo view('</html>');
 }
 
-function renderView($_template = 'main', $_content = '')
+function view($content = '')
 {
-    $_render_template = renderTemplate($_template);
+    $out = '';
 
-    if(is_array($_content))
-    {
-        $_content = _view($_content);
+    if (is_array($content)) {
+        foreach ($content as $content_part) {
+            $out .= view($content_part);
+        }
+    } else {
+        if (!empty($content)) {
+            $out .= $content . EOL;
+        }
     }
 
-    $_assets          = '';
-    $_assets_external = dataGet('assets_external', []);
-    $_assets_local    = dataGet('assets_local', []);
-    $_blocks          = dataGet('blocks', []);
-    $_partials        = dataGet('partials', []);
-    $_assets_out      = [];
+    return $out;
+}
 
-    if(count($_assets_external))
-    {
-        $_assets_out[] = implode(EOL, $_assets_external);
+function renderView($template = 'main', $content = '')
+{
+    $render_template = renderTemplate($template);
+
+    if (is_array($content)) {
+        $content = view($content);
     }
 
-    if(count($_assets_local))
-    {
-        $_assets_out[] = implode(EOL, $_assets_local);
+    $assets          = '';
+    $assets_external = dataGet('assets_external', []);
+    $assets_local    = dataGet('assets_local', []);
+    $blocks          = dataGet('blocks', []);
+    $partials        = dataGet('partials', []);
+    $assets_out      = [];
+
+    if (count($assets_external)) {
+        $assets_out[] = implode(EOL, $assets_external);
     }
 
-    $_assets = implode(EOL, $_assets_out);
+    if (count($assets_local)) {
+        $assets_out[] = implode(EOL, $assets_local);
+    }
 
-    if(count($_blocks))
-    {
-        foreach($_blocks as $_id=>$_block)
-        {
-            if(in_array($_block['type'], ['header', 'aside', 'article', 'section', 'footer']))
-            {
-                $_content .= '<'.$_id.'>'. $_block['content'].'</'.$_id.'>'.EOL;
-            }
-            else
-            {
-                $_content .= sprintf('<div id="%s">%s</div>', $_id, $_block['content']). EOL;
+    $assets = implode(EOL, $assets_out);
+    $sections = ['header', 'aside', 'article', 'section', 'footer'];
+
+    if (count($blocks)) {
+        foreach ($blocks as $id=>$block) {
+            if (in_array($block['type'], $sections)) {
+                $content .= '<'.$id. (isset($block['name'])?' id="'.$block['name'].'"':''). '>'. $block['content'].'</'.$id.'>'.EOL;
+            } else {
+                $content .= sprintf('<div id="%s">%s</div>', 
+                    $id, $block['content']). EOL;
             }
         }
     }
 
-    if(count($_partials))
-    {
-        foreach($_partials as $_search => $_partial)
-        {
-            $_content = str_replace( $_search, $_partial, $_content);
+    if (count($partials)) {
+        foreach ($partials as $search => $partial) {
+            $content = str_replace($search, $partial, $content);
         }
     }
 
     headerHTML();
 
-    echo fileExecute( $_render_template, compact('_assets', '_content') );
+    echo fileExecute($render_template, compact('assets', 'content'));
 }
 
-function renderTemplate($_template = '')
+function renderTemplate($template = '')
 {
-    $_file_path = CMSIF_TEMPLATES.'/'.$_template.'.php';
-    if (file_exists($_file_path) && is_readable($_file_path))
-    {
-        return '/'.$_template.'.php';
-    }
-    else
-    {
+    $file_path = CMSIF_TEMPLATES.'/'.$template.'.php';
+    if (file_exists($file_path) && is_readable($file_path)) {
+        return '/'.$template.'.php';
+    } else {
         error404();
     }
 }
 
-function renderBlock($_block='', $_name='', $_type='block')
+function renderBlock($content = '', $name = '', $type = 'block')
 {
-    $_blocks = dataGet('blocks', []);
-    if(empty($_name))
-    {
-        $_name = 'block_'. (count($_blocks) + 1);
+    $blocks = dataGet('blocks', []);
+    if (empty($name)) {
+        $name = 'block_'. (count($blocks) + 1);
     }
-    $_blocks[ $_name ] = ['content'=>$_block, 'type'=>$_type];
-    dataSet('blocks', $_blocks);
+    $blocks[ $name ] = ['content' => $content, 'type' => $type];
+    dataSet('blocks', $blocks);
     return true;
 }
 
-function renderPartial($_partial='', $_name='', $_opt = [])
+function renderPartial($partial = '', $name = '', $opt = [])
 {
-    $_partial = fileExecute('_partials/'.$_partial.'.php', $_opt);
-    $_partials = dataGet('partials', []);
-    if(empty($_name))
-    {
-        $_name = 'partial_'. (count($_partials) + 1);
+    $partial = fileExecute('_partials/'.$partial.'.php', $opt);
+    $partials = dataGet('partials', []);
+    if (empty($name)) {
+        $name = 'partial_'. (count($partials) + 1);
     }
-    $_partials[ '{{ '.$_name.' }}' ] = $_partial;
-    dataSet('partials', $_partials);
+    $partials[ '{{ '.$name.' }}' ] = $partial;
+    dataSet('partials', $partials);
     return true;
 }
 
@@ -928,109 +888,116 @@ function error404()
     exit(0);
 }
 
-function asset($_asset = '', $_opt=[])
+function asset($asset = '', $opt = [])
 {
-    if(!empty($_asset))
-    {
-        $_assets = dataGet('assets_local', []);
-        if(isset($_assets[ md5($_asset) ])) return;
+    $out = '';
+    if (!empty($asset)) {
+        $assets = dataGet('assets_local', []);
+        if (isset($assets[ md5($asset) ])) {
+            return;
+        }
 
-        $_type        = isset($_opt['type'])? $_opt['type']: null;
-        $_media       = isset($_opt['media'])? $_opt['media']: null;
-        $_integrity   = isset($_opt['integrity'])? $_opt['integrity']: null;
-        $_crossorigin = isset($_opt['crossorigin'])? $_opt['crossorigin']: null;
-        $_version     = isset($_opt['version'])? $_opt['version']: null;
+        $type        = isset($opt['type'])? $opt['type']: null;
+        $media       = isset($opt['media'])? $opt['media']: null;
+        $integrity   = isset($opt['integrity'])? $opt['integrity']: null;
+        $crossorigin = isset($opt['crossorigin'])? $opt['crossorigin']: null;
+        $version     = isset($opt['version'])? $opt['version']: null;
 
-        $_out = '';
-        $_file = filter($_asset, ' .\/');
-        $_ext = stringLow( pathinfo($_file, PATHINFO_EXTENSION) );
-        $_file_path = CMSIF_WEBROOT .'/'. $_ext .'/'.  $_file;
-        $_file_url  = getHost() . CMSIF_ASSETS . $_ext.'/'. $_file .(!is_null($_version)? '?'.$_version:'');
+        $file = filter($asset, ' .\/');
+        $ext = stringLow( pathinfo($file, PATHINFO_EXTENSION) );
+        $file_path = CMSIF_WEBROOT .'/'. $ext .'/'.  $file;
+        $file_url  = getHost() . CMSIF_ASSETS . $ext.'/'. $file .
+            (!is_null($version)? '?'.$version: '');
 
-        if(file_exists($_file_path) && is_readable($_file_path))
-        {
-            $_options  = $_media? ' media="'.$_media.'"':'';
-            $_options .= $_integrity? ' integrity="'.$_integrity.'"':'';
-            $_options .= $_crossorigin? ' crossorigin="'.$_crossorigin.'"':'';
+        if (file_exists($file_path) && is_readable($file_path)) {
+            $options  = $media? ' media="'.$media.'"': '';
+            $options .= $integrity? ' integrity="'.$integrity.'"': '';
+            $options .= $crossorigin? ' crossorigin="'.$crossorigin.'"': '';
 
-            switch($_ext)
-            {
+            switch ($ext) {
                 case 'css':
-                    $_out = '<link rel="stylesheet" type="text/css" href="'. $_file_url .'"'. $_options .'>';
+                    $out = '<link rel="stylesheet" type="text/css" href="'.
+                        $file_url.'"'.$options.'>';
                     break;
+
                 case 'js':
-                    $_out = '<script language="javascript" src="'. $_file_url .'"'.$_options.'></script>';
+                    $out = '<script language="javascript" src="'.
+                        $file_url.'"'.$options.'></script>';
                     break;
+
                 default:
                     break;
             }
         }
-        
-        if(!empty($_out))
-        {    
-            $_assets[md5($_asset)] = $_out;
-            dataSet('assets_local', $_assets);
+
+        if (!empty($out)) {
+            $assets[ md5($asset) ] = $out;
+            dataSet('assets_local', $assets);
         }
     }
 
-    return false;
+    return $out;
 }
 
-function assetExternal($_asset = '', $_opt=[])
+function assetExternal($asset = '', $opt = [])
 {
-    if(!empty($_asset))
-    {
-        $_assets = dataGet('assets_external', []);
-        if(isset($_assets[ md5($_asset) ])) return;
-        
-        $_type        = isset($_opt['type'])? $_opt['type']: null;
-        $_media       = isset($_opt['media'])? $_opt['media']: null;
-        $_integrity   = isset($_opt['integrity'])? $_opt['integrity']: null;
-        $_crossorigin = isset($_opt['crossorigin'])? $_opt['crossorigin']: null;
+    $out = '';
+    if (!empty($asset)) {
+        $assets = dataGet('assets_external', []);
+        if (isset($assets[ md5($asset) ])) { 
+            return ''; 
+        }
 
-        $_ext = stringLow( !is_null($_type)? $_type: pathinfo($_asset, PATHINFO_EXTENSION) );
+        $type        = isset($opt['type'])? $opt['type']: null;
+        $media       = isset($opt['media'])? $opt['media']: null;
+        $integrity   = isset($opt['integrity'])? $opt['integrity']: null;
+        $crossorigin = isset($opt['crossorigin'])? $opt['crossorigin']: null;
 
-        $_options  = $_media? ' media="'.$_media.'"':'';
-        $_options .= $_integrity? ' integrity="'.$_integrity.'"':'';
-        $_options .= $_crossorigin? ' crossorigin="'.$_crossorigin.'"':'';
+        $ext = stringLow( !is_null($type)? $type: 
+            pathinfo($asset, PATHINFO_EXTENSION) );
 
-        $_out = '';
+        $options  = $media? ' media="'.$media.'"': '';
+        $options .= $integrity? ' integrity="'.$integrity.'"': '';
+        $options .= $crossorigin? ' crossorigin="'.$crossorigin.'"': '';
 
-        switch($_ext)
-        {
+        switch ($ext) {
             case 'css':
-                $_out = '<link rel="stylesheet" type="text/css" href="'. $_asset .'"'.$_options.'>';
+                $out = '<link rel="stylesheet" type="text/css" href="'.
+                    $asset.'"'.$options.'>';
                 break;
+
             case 'js':
-                $_out = '<script language="javascript" src="'. $_asset .'"'.$_options.'></script>';
+                $out = '<script language="javascript" src="'.
+                    $asset.'"'.$options.'></script>';
             default:
                 break;
         }
         
-        if(!empty($_out))
-        {
-            $_assets[md5($_asset)] = $_out;
-            dataSet('assets_external', $_assets);
+        if (!empty($out)) {
+            $assets[md5($asset)] = $out;
+            dataSet('assets_external', $assets);
         }
     }
+
+    return $out;
 }
 
-function stringLow($_opt = '')
+function stringLow($opt = '')
 {
-    return strtolower($_opt);
+    return strtolower($opt);
 }
 
-function stringUp($_opt = '')
+function stringUp($opt = '')
 {
-    return strtoupper($_opt);
+    return strtoupper($opt);
 }
 
-function stringLen($_opt = '')
+function stringLen($opt = '')
 {
-    return strlen($_opt);
+    return strlen($opt);
 }
 
-function stringReplace($_opt = '', $_from = '', $_to = '')
+function stringReplace($opt = '', $from = '', $to = '')
 {
-    return str_ireplace($_from, $_to, $_opt);
+    return str_ireplace($from, $to, $opt);
 }
