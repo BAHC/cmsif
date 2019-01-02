@@ -256,11 +256,8 @@ function filter($var=[], $filter = " \t\n\r\0\x0B", $default = '')
                 }
             }
         }
-    }
-    else
-    {
-        if(!empty($var))
-        {
+    } else {
+        if (!empty($var)) {
             $var = filter([$var=>$var], $filter);
             return array_pop( $var );
         }
@@ -563,20 +560,27 @@ function dbMultiQuery($query, $opt = [])
     if (mysqli_multi_query(dbh(), $query)) {
         do {
             /* store first result set */
-            if ($result = mysqli_store_result(dbh())) {
-                if (!$result) {
-                    if (!empty(dbh()->error)) {
-                        dump([$query, dbh()->error]);
-                    }
-                } else {
-                    while ($row = mysqli_fetch_assoc($result)) {
-                        $out[] = $row;
-                    }
-                    mysqli_free_result($result);
-                }
-            }
+            $result = mysqli_store_result(dbh());
+            $out = dbFetchAssoc($result);
         }
         while (@mysqli_next_result(dbh()));
+    }
+
+    return $out;
+}
+
+function dbFetchAssoc($result = null) 
+{
+    $out = [];
+    if (!$result) {
+        if (!empty(dbh()->error)) {
+            dump([$query, dbh()->error]);
+        }
+    } else {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $out[] = $row;
+        }
+        mysqli_free_result($result);
     }
 
     return $out;
