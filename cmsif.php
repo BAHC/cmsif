@@ -438,7 +438,7 @@ function fileExecute($file = '', $opt = [])
     return $out;
 }
 
-function router($method = null, $match_path = '/', $call)
+function router($method = null, $match_path = '/', $call, $opt = [])
 {
     if ($method === getMethod()) {
         if ($match_path === getUrl()) {
@@ -455,13 +455,25 @@ function router($method = null, $match_path = '/', $call)
         preg_match( '@^'.$match_path.'@', getUrl(), $matches);
         if (!empty($matches[1]) || $match_path === getUrl())
         {
+            dataSet('route', $match_path);
+            if(count($opt))
+            {
+                foreach($opt as $k=>$name) 
+                {
+                    $k += 1;
+                    if(isset($matches[$k]))
+                    {
+                        $matches[$name] = $matches[$k]; unset($matches[$k]);
+                    }
+                }
+            }
+            dataSet('matches', $matches);
             if (is_callable($call))
             {
                 is_string($call) ? $call($matches): call_user_func($call, $matches);
             } else {
                 require $call;
             }
-            dataSet('route', $match_path);
             exit;
         }
     }
